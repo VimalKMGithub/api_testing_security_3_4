@@ -9,13 +9,19 @@ import org.vimal.dtos.UserDto;
 
 import java.io.IOException;
 import java.security.InvalidKeyException;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 import static org.hamcrest.Matchers.*;
+import static org.vimal.api.ApiCalls.executeRequest;
 import static org.vimal.api.AuthenticationCalls.*;
+import static org.vimal.api.Common.waitForResponse;
 import static org.vimal.api.UserCalls.getSelfDetails;
-import static org.vimal.constants.Common.AUTHENTICATOR_APP_MFA;
-import static org.vimal.constants.Common.ENABLE;
+import static org.vimal.constants.Common.*;
+import static org.vimal.constants.SubPaths.AUTH;
+import static org.vimal.constants.SubPaths.USER;
+import static org.vimal.enums.RequestMethods.GET;
+import static org.vimal.enums.RequestMethods.POST;
 import static org.vimal.helpers.InvalidInputsHelper.*;
 import static org.vimal.helpers.ResponseValidatorHelper.validateResponseOfGetSelfDetails;
 import static org.vimal.utils.DateTimeUtility.getCurrentFormattedLocalTimeStamp;
@@ -133,6 +139,54 @@ public class AuthenticationServiceTests extends BaseTest {
                 .statusCode(200)
                 .body("message", containsStringIgnoringCase("Logout successful"));
         getSelfDetails(accessToken).then()
+                .statusCode(401)
+                .body("error", containsStringIgnoringCase("Unauthorized"))
+                .body("message", containsStringIgnoringCase("Invalid token"));
+    }
+
+    @Test
+    public void test_Logout_All_Devices_Success() throws ExecutionException, InterruptedException {
+        UserDto user = createTestUser();
+        String accessToken1 = getAccessToken(
+                user.getUsername(),
+                user.getPassword()
+        );
+        String testDeviceId = "TestDeviceId_" + getCurrentFormattedLocalTimeStamp() + "_" + generateRandomStringAlphaNumeric();
+        Response response = waitForResponse(() -> executeRequest(
+                        POST,
+                        AUTH + "/login",
+                        Map.of(X_DEVICE_ID_HEADER, testDeviceId),
+                        Map.of(
+                                "usernameOrEmail", user.getUsername(),
+                                "password", user.getPassword()
+                        )
+                )
+        );
+        response.then()
+                .statusCode(200)
+                .body("access_token", notNullValue())
+                .body("refresh_token", notNullValue())
+                .body("expires_in_seconds", equalTo(1800))
+                .body("token_type", containsStringIgnoringCase("Bearer"));
+        System.out.println(accessToken1.equals(response.jsonPath()
+                .getString("access_token")));
+        logoutAllDevices(accessToken1).then()
+                .statusCode(200)
+                .body("message", containsStringIgnoringCase("Logout from all devices successful"));
+        getSelfDetails(accessToken1).then()
+                .statusCode(401)
+                .body("error", containsStringIgnoringCase("Unauthorized"))
+                .body("message", containsStringIgnoringCase("Invalid token"));
+        waitForResponse(() -> executeRequest(
+                        GET,
+                        USER + "/getSelfDetails",
+                        Map.of(
+                                AUTHORIZATION, BEARER + response.jsonPath()
+                                        .getString("access_token"),
+                                X_DEVICE_ID_HEADER, testDeviceId
+                        )
+                )
+        ).then()
                 .statusCode(401)
                 .body("error", containsStringIgnoringCase("Unauthorized"))
                 .body("message", containsStringIgnoringCase("Invalid token"));

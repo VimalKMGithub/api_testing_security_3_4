@@ -40,6 +40,15 @@ public final class AuthenticationCalls {
         );
     }
 
+    public static Response logoutAllDevices(String accessToken) throws ExecutionException, InterruptedException {
+        return waitForResponse(() -> executeRequest(
+                        POST,
+                        AUTH + "/logout/allDevices",
+                        Map.of(AUTHORIZATION, BEARER + accessToken)
+                )
+        );
+    }
+
     public static Response refreshAccessToken(String refreshToken) throws ExecutionException, InterruptedException {
         return waitForResponse(() -> executeRequest(
                         POST,
