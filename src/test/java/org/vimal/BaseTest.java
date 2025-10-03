@@ -30,6 +30,8 @@ public abstract class BaseTest {
     protected static final Set<RoleDto> TEST_ROLES = ConcurrentHashMap.newKeySet();
     private static final String BASE_URL = "http://localhost:8080";
     private static final String BASE_PATH = "api/v1";
+    public static final String X_DEVICE_ID_HEADER = "X-Device-ID";
+    public static final String DEFAULT_DEVICE_ID = "Test-Device-001";
     public static final String TEST_EMAIL = System.getenv("TEST_EMAIL");
     public static final String TEST_EMAIL_PASSWORD = System.getenv("TEST_EMAIL_PASSWORD");
     public static final String GLOBAL_ADMIN_USERNAME = System.getenv("GLOBAL_ADMIN_USERNAME");
@@ -46,7 +48,7 @@ public abstract class BaseTest {
         RestAssured.baseURI = BASE_URL;
         RestAssured.basePath = BASE_PATH;
         log.info("Enabling logging of request & response if validation fails.");
-        RestAssured.requestSpecification = given().header("X-Device-ID", "Test-Device-001");
+        RestAssured.requestSpecification = given().header(X_DEVICE_ID_HEADER, DEFAULT_DEVICE_ID);
         RestAssured.enableLoggingOfRequestAndResponseIfValidationFails();
         GLOBAL_ADMIN_ACCESS_TOKEN = getAccessToken(
                 GLOBAL_ADMIN_USERNAME,
